@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>BALLHOG CASINO</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root { --red: #c8102e; --dark: #0f0f0f; --gold: #ffd700; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #0a0000;
+      color: #ddd;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      touch-action: manipulation;
+    }
+    .screen { display: none; }
+    .screen.active { display: block; }
+    .login-container {
+      max-width: 420px;
+      margin: 80px auto;
+      padding: 40px 25px;
+      background: #1a0000;
+      border: 3px solid var(--red);
+      border-radius: 20px;
+      text-align: center;
+    }
+    input {
+      width: 100%;
+      padding: 16px;
+      margin: 12px 0;
+      background: #300000;
+      border: 1px solid var(--red);
+      border-radius: 8px;
+      color: white;
+      font-size: 1.1em;
+    }
+    button {
+      width: 100%;
+      padding: 16px;
+      margin: 10px 0;
+      background: var(--red);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1.1em;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:active { transform: scale(0.97); }
+    header {
+      background: #1a0000;
+      border-bottom: 4px solid var(--red);
+      padding: 12px 15px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .logo { font-size: 1.9em; font-weight: bold; color: var(--red); letter-spacing: 1px; }
+    .balance-bar {
+      background: #300000;
+      padding: 10px 15px;
+      border-radius: 8px;
+      font-size: 1.35em;
+      border: 1px solid var(--red);
+    }
+    .multiplier-badge {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      background: linear-gradient(#ffd700, #ff8800);
+      color: #000;
+      padding: 10px 18px;
+      border-radius: 30px;
+      font-weight: bold;
+      z-index: 1000;
+      display: none;
+    }
+    .sidebar {
+      background: #1a0000;
+      padding: 12px;
+      display: flex;
+      overflow-x: auto;
+      gap: 10px;
+      border-bottom: 3px solid var(--red);
+      white-space: nowrap;
+    }
+    .nav-btn {
+      padding: 12px 20px;
+      background: #300000;
+      border: 1px solid var(--red);
+      color: #ddd;
+      border-radius: 8px;
+      min-width: 110px;
+      text-align: center;
+    }
+    .nav-btn.active {
+      background: var(--red);
+      color: white;
+    }
+    .glass { background: rgba(30, 0, 0, 0.9); border: 1px solid var(--red); border-radius: 16px; padding: 20px; }
+    .slot-machine { background: linear-gradient(#300000, #1a0000); border: 8px solid var(--gold); border-radius: 20px; padding: 20px; margin: 20px auto; max-width: 380px; }
+    .reels-container { display: flex; justify-content: center; gap: 12px; background: #000; padding: 15px; border-radius: 12px; border: 4px solid #500000; }
+    .reel { width: 90px; height: 110px; background: #111; border: 3px solid var(--gold); border-radius: 10px; font-size: 3.8em; display: flex; align-items: center; justify-content: center; }
+
+    .rocket-container {
+      position: relative;
+      height: 340px;
+      background: linear-gradient(#000, #111);
+      border-radius: 12px;
+      overflow: hidden;
+      margin: 15px 0;
+      border: 4px solid #500000;
+    }
+    .rocket {
+      position: absolute;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 4em;
+      transition: bottom 0.18s linear;
+      z-index: 10;
+    }
+    .flame { 
+      position: absolute;
+      bottom: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 2.3em;
+    }
+    .crash-chart-container { height: 160px; margin: 10px 0; }
+    .game-screen { display: none; }
+    .game-screen.active { display: block; }
+  </style>
+</head>
+<body>
+
+  <!-- LOGIN -->
+  <div id="loginScreen" class="screen active">
+    <div class="login-container">
+      <h1 style="color:var(--red);">BALLHOG CASINO</h1>
+      <input type="text" id="loginUsername" placeholder="Username" autofocus>
+      <input type="password" id="loginPassword" placeholder="Password">
+      <button onclick="loginUser()">Login</button>
+      <button onclick="showCreateScreen()" style="background:#c8102e;">Create New Account</button>
+    </div>
+  </div>
+
+  <!-- CREATE ACCOUNT -->
+  <div id="createScreen" class="screen">
+    <div class="login-container">
+      <h2>Create Account</h2>
+      <input type="text" id="createUsername" placeholder="Username">
+      <input type="password" id="createPassword" placeholder="Password">
+      <button onclick="createAccount()">Create Account</button>
+      <button onclick="backToLogin()" style="background:#666;">Back</button>
+    </div>
+  </div>
+
+  <!-- MAIN CASINO -->
+  <div id="mainScreen" class="screen">
+    <header>
+      <div class="logo">BALLHOG CASINO</div>
+      <div class="balance-bar">
+        Balance: $<span id="balance">10000</span> — <span id="currentUser"></span>
+        <button onclick="logout()" style="background:#c8102e; padding:6px 12px; font-size:0.9em;">Logout</button>
+      </div>
+    </header>
+    <div class="multiplier-badge" id="multiBadge">🔥 5X LUCK ACTIVE 🔥</div>
+    <div class="sidebar" id="navContainer"></div>
+
+    <div class="content">
+      <div class="promo-section">
+        <input type="text" id="promoCode" placeholder="Promo Code" style="max-width:200px;">
+        <button onclick="redeemPromo()">Activate</button>
+      </div>
+
+      <!-- SLOTS -->
+      <div id="game0" class="game-screen active">
+        <h2 class="glass" style="text-align:center; color:var(--red);">🎰 SLOT MACHINE</h2>
+        <div class="slot-machine">
+          <div class="reels-container" id="reels">
+            <div class="reel" id="reel1">🍒</div>
+            <div class="reel" id="reel2">🍒</div>
+            <div class="reel" id="reel3">🍒</div>
+          </div>
+        </div>
+        <div style="text-align:center;">
+          <input type="number" id="betSlots" value="100" min="10"><br><br>
+          <button onclick="spinSlots()">SPIN</button>
+        </div>
+        <div id="slotsResult" style="text-align:center; margin-top:20px; font-size:1.6em; min-height:70px;"></div>
+      </div>
+
+      <!-- BLACKJACK -->
+      <div id="game1" class="game-screen">
+        <h2 class="glass" style="text-align:center; color:var(--red);">🃏 BLACKJACK</h2>
+        <div style="text-align:center; font-size:1.35em; margin:15px 0;">
+          <p>Dealer: <span id="dealerHand"></span> (<span id="dealerTotal"></span>)</p>
+          <p>Player: <span id="playerHand"></span> (<span id="playerTotal"></span>)</p>
+        </div>
+        <div style="text-align:center;">
+          <input type="number" id="betBJ" value="50" min="10"><br><br>
+          <button onclick="dealBlackjack()">Deal</button>
+          <button onclick="hitBJ()" id="hitBtn" style="display:none;">Hit</button>
+          <button onclick="standBJ()" id="standBtn" style="display:none;">Stand</button>
+        </div>
+        <div id="bjResult" style="text-align:center; margin-top:20px; font-size:1.5em;"></div>
+      </div>
+
+      <!-- ROULETTE -->
+      <div id="game2" class="game-screen">
+        <h2 class="glass" style="text-align:center; color:var(--red);">🎡 ROULETTE</h2>
+        <div style="text-align:center;">
+          <p>Number (0-36): <input type="number" id="rouletteNumber" value="17" min="0" max="36"></p>
+          <input type="number" id="betRoulette" value="50" min="10"><br><br>
+          <button onclick="spinRoulette()">SPIN WHEEL</button>
+        </div>
+        <div id="rouletteResult" style="text-align:center; margin-top:20px; font-size:1.5em;"></div>
+      </div>
+
+      <!-- COIN FLIP -->
+      <div id="game3" class="game-screen">
+        <h2 class="glass" style="text-align:center; color:var(--red);">🪙 COIN FLIP (50/50)</h2>
+        <div style="text-align:center;">
+          <input type="number" id="betCoin" value="100" min="10"><br><br>
+          <button onclick="flipCoin('heads')">HEADS</button>
+          <button onclick="flipCoin('tails')">TAILS</button>
+        </div>
+        <div id="coinResult" style="text-align:center; margin-top:25px; font-size:1.5em;"></div>
+      </div>
+
+      <!-- CRASH ROCKET -->
+      <div id="game4" class="game-screen">
+        <h2 class="glass" style="text-align:center; color:var(--red);">🚀 CRASH ROCKET</h2>
+        <div class="glass">
+          <div class="rocket-container">
+            <div id="rocket" class="rocket">🚀</div>
+            <div id="flame" class="flame">🔥</div>
+          </div>
+          <div class="crash-chart-container">
+            <canvas id="crashChart"></canvas>
+          </div>
+          <div id="liveMultiplier" style="text-align:center; font-size:2.8em; font-weight:bold; color:#ffcc00;">1.00x</div>
+        </div>
+        <div style="text-align:center; margin-top:15px;">
+          <input type="number" id="betCrash" value="100" min="10"><br><br>
+          <button id="betBtn" onclick="startCrash()">LAUNCH ROCKET</button>
+          <button id="cashoutBtn" onclick="cashOut()" style="display:none; background:#00cc66;">CASH OUT NOW</button>
+        </div>
+        <div id="crashResult" style="text-align:center; margin-top:20px; font-size:1.5em; min-height:80px;"></div>
+      </div>
+
+      <!-- LEADERBOARD -->
+      <div id="game5" class="game-screen">
+        <h2 class="glass" style="text-align:center; color:var(--red);">🏆 Leaderboard</h2>
+        <div class="glass" id="leaderboardContent"></div>
+      </div>
+
+      <!-- ADMIN -->
+      <div id="game6" class="game-screen">
+        <h2 class="glass" style="text-align:center; color:var(--red);">🔧 ADMIN PANEL</h2>
+        <div class="glass">
+          <div id="adminUserList"></div>
+          <button onclick="resetAllData()" style="background:#c8102e; margin-top:20px;">Reset ALL Data</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentUser = null;
+    let currentData = {};
+    let chart = null;
+    let crashInterval = null;
+    let multipliers = [], times = [];
+    let currentBet = 0, currentMultiplier = 1, crashed = false;
+    const symbols = ['🍒','🍋','🍊','⭐','💎','7️⃣'];
+
+    let deck = [], playerHand = [], dealerHand = [];
+
+    function getAllUsers() { return JSON.parse(localStorage.getItem("ballhogUsers")) || {}; }
+    function saveAllUsers(users) { localStorage.setItem("ballhogUsers", JSON.stringify(users)); }
+
+    function loginUser() {
+      const username = document.getElementById('loginUsername').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      if (!username || !password) return alert("Username and password required");
+      const users = getAllUsers();
+      if (users[username] && users[username].password === password) {
+        currentUser = username;
+        currentData = users[username];
+        enterMainScreen();
+      } else alert("Incorrect username or password.");
+    }
+
+    function showCreateScreen() {
+      document.getElementById('loginScreen').classList.remove('active');
+      document.getElementById('createScreen').classList.add('active');
+    }
+    function backToLogin() {
+      document.getElementById('createScreen').classList.remove('active');
+      document.getElementById('loginScreen').classList.add('active');
+    }
+
+    function createAccount() {
+      const username = document.getElementById('createUsername').value.trim();
+      const password = document.getElementById('createPassword').value;
+      if (!username || !password) return alert("Username and password required");
+      const users = getAllUsers();
+      if (users[username]) return alert("Username already taken!");
+      users[username] = {
+        password: password,
+        balance: 10000,
+        isFiveX: false,
+        promoUsed: false,
+        totalSpins: 0,
+        totalBets: 0,
+        totalWins: 0,
+        biggestWin: 0
+      };
+      saveAllUsers(users);
+      currentUser = username;
+      currentData = users[username];
+      enterMainScreen();
+      alert(`Account created! Welcome to BALLHOG CASINO, ${username}`);
+    }
+
+    function enterMainScreen() {
+      document.getElementById('loginScreen').classList.remove('active');
+      document.getElementById('createScreen').classList.remove('active');
+      document.getElementById('mainScreen').classList.add('active');
+      document.getElementById('currentUser').textContent = currentUser;
+      document.getElementById('balance').textContent = currentData.balance.toLocaleString();
+      if (currentData.isFiveX) document.getElementById('multiBadge').style.display = 'block';
+      createNav();
+      updateLeaderboard();
+    }
+
+    function logout() { saveUserData(); location.reload(); }
+    function saveUserData() {
+      if (!currentUser) return;
+      const users = getAllUsers();
+      users[currentUser] = currentData;
+      saveAllUsers(users);
+    }
+
+    function redeemPromo() {
+      if (currentData.promoUsed) return alert("Promo already used.");
+      const code = document.getElementById('promoCode').value.trim().toUpperCase();
+      if (code === "BALLHOG5X" || code === "5X") {
+        currentData.isFiveX = true;
+        currentData.promoUsed = true;
+        saveUserData();
+        document.getElementById('multiBadge').style.display = 'block';
+        alert("🎉 5X LUCK ACTIVATED!");
+      } else alert("Invalid code");
+    }
+
+    // Navigation, Slots, Blackjack, Crash, etc. (all updated with new storage key)
+    function createNav() {
+      const nav = document.getElementById('navContainer');
+      nav.innerHTML = "";
+      const names = ["🎰 Slots", "🃏 BJ", "🎡 Roulette", "🪙 Coin", "🚀 Crash", "🏆 Leaderboard"];
+      if (currentUser === "admin") names.push("🔧 Admin");
+      names.forEach((name, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'nav-btn';
+        btn.textContent = name;
+        btn.onclick = () => switchGame(i);
+        if (i === 0) btn.classList.add('active');
+        nav.appendChild(btn);
+      });
+    }
+
+    function switchGame(n) {
+      document.querySelectorAll('.game-screen').forEach(g => g.classList.remove('active'));
+      document.getElementById(`game${n}`).classList.add('active');
+      document.querySelectorAll('.nav-btn').forEach((b, i) => b.classList.toggle('active', i === n));
+      if (n === 5) updateLeaderboard();
+      if (n === 6) showAdminPanel();
+    }
+
+    function playWinSound() {
+      try {
+        const audio = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audio.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.value = 900;
+        osc.connect(audio.destination);
+        osc.start();
+        setTimeout(() => osc.stop(), 200);
+      } catch(e) {}
+    }
+
+    // SLOTS
+    function spinSlots() {
+      const bet = parseInt(document.getElementById('betSlots').value) || 100;
+      if (bet > currentData.balance || bet < 10) return alert("Invalid bet!");
+      currentData.balance -= bet;
+      currentData.totalBets += bet;
+      currentData.totalSpins++;
+      const reel1 = document.getElementById('reel1');
+      const reel2 = document.getElementById('reel2');
+      const reel3 = document.getElementById('reel3');
+      let spins = 0;
+      const interval = setInterval(() => {
+        reel1.textContent = symbols[Math.floor(Math.random()*6)];
+        reel2.textContent = symbols[Math.floor(Math.random()*6)];
+        reel3.textContent = symbols[Math.floor(Math.random()*6)];
+        spins++;
+        if (spins > 16) clearInterval(interval);
+      }, 70);
+      setTimeout(() => {
+        const r = Array(3).fill().map(() => symbols[Math.floor(Math.random()*6)]);
+        reel1.textContent = r[0]; reel2.textContent = r[1]; reel3.textContent = r[2];
+        let win = 0;
+        if (r[0] === r[1] && r[1] === r[2]) win = (r[0]==='7️⃣' ? 200 : 50) * bet;
+        else if (r[0] === r[1] || r[1] === r[2]) win = currentData.isFiveX ? bet*15 : bet*5;
+        if (win > 0) {
+          currentData.balance += win;
+          currentData.totalWins += win;
+          if (win > currentData.biggestWin) currentData.biggestWin = win;
+          document.getElementById('slotsResult').innerHTML = `🎉 JACKPOT! +$${win}`;
+          playWinSound();
+        } else {
+          document.getElementById('slotsResult').innerHTML = "No win this spin";
+        }
+        document.getElementById('balance').textContent = currentData.balance.toLocaleString();
+        saveUserData();
+        updateLeaderboard();
+      }, 1250);
+    }
+
+    // BLACKJACK (Fully working)
+    function createDeck() {
+      deck = [];
+      const suits = ['♠','♥','♦','♣'];
+      const values = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+      for (let suit of suits) for (let value of values) deck.push(value + suit);
+      deck.sort(() => Math.random() - 0.5);
+    }
+
+    function calculateTotal(hand) {
+      let total = 0, aces = 0;
+      for (let card of hand) {
+        let val = card.slice(0, -1);
+        if (['J','Q','K'].includes(val)) total += 10;
+        else if (val === 'A') { aces++; total += 11; }
+        else total += parseInt(val);
+      }
+      while (total > 21 && aces > 0) { total -= 10; aces--; }
+      return total;
+    }
+
+    function dealBlackjack() {
+      const bet = parseInt(document.getElementById('betBJ').value) || 50;
+      if (bet > currentData.balance || bet < 10) return alert("Invalid bet!");
+      currentData.balance -= bet;
+      document.getElementById('balance').textContent = currentData.balance.toLocaleString();
+
+      createDeck();
+      playerHand = [deck.pop(), deck.pop()];
+      dealerHand = [deck.pop(), deck.pop()];
+
+      document.getElementById('playerHand').textContent = playerHand.join(' ');
+      document.getElementById('playerTotal').textContent = calculateTotal(playerHand);
+      document.getElementById('dealerHand').textContent = dealerHand[0] + ' ?';
+      document.getElementById('dealerTotal').textContent = '?';
+
+      document.getElementById('hitBtn').style.display = 'inline-block';
+      document.getElementById('standBtn').style.display = 'inline-block';
+      document.getElementById('bjResult').innerHTML = '';
+    }
+
+    function hitBJ() {
+      playerHand.push(deck.pop());
+      document.getElementById('playerHand').textContent = playerHand.join(' ');
+      const total = calculateTotal(playerHand);
+      document.getElementById('playerTotal').textContent = total;
+      if (total > 21) endBlackjack("Bust! You lose.");
+    }
+
+    function standBJ() {
+      document.getElementById('hitBtn').style.display = 'none';
+      document.getElementById('standBtn').style.display = 'none';
+      let dealerTotal = calculateTotal(dealerHand);
+      while (dealerTotal < 17) {
+        dealerHand.push(deck.pop());
+        dealerTotal = calculateTotal(dealerHand);
+      }
+      document.getElementById('dealerHand').textContent = dealerHand.join(' ');
+      document.getElementById('dealerTotal').textContent = dealerTotal;
+
+      const playerTotal = calculateTotal(playerHand);
+      let message = (dealerTotal > 21) ? "Dealer bust! You win!" :
+                    (playerTotal > dealerTotal) ? "You win!" :
+                    (playerTotal < dealerTotal) ? "You lose." : "Push.";
+      endBlackjack(message);
+    }
+
+    function endBlackjack(message) {
+      const bet = parseInt(document.getElementById('betBJ').value) || 50;
+      if (message.includes("win") || message.includes("bust")) {
+        currentData.balance += bet * 2;
+        playWinSound();
+      } else if (message.includes("Push")) currentData.balance += bet;
+      document.getElementById('bjResult').innerHTML = `<strong>${message}</strong>`;
+      document.getElementById('balance').textContent = currentData.balance.toLocaleString();
+      saveUserData();
+    }
+
+    // CRASH ROCKET
+    function initCrashChart() {
+      if (chart) chart.destroy();
+      chart = new Chart(document.getElementById('crashChart'), {
+        type: 'line',
+        data: { labels: times, datasets: [{ label: 'Multiplier', data: multipliers, borderColor: '#ffcc00', borderWidth: 4, tension: 0.35, pointRadius: 0 }] },
+        options: { animation: { duration: 80 }, plugins: { legend: { display: false } }, scales: { x: { title: { display: true, text: 'Time (s)' }}, y: { beginAtZero: true }}}
+      });
+    }
+
+    function startCrash() {
+      const bet = parseInt(document.getElementById('betCrash').value) || 100;
+      if (bet > currentData.balance || bet < 10) return alert("Invalid bet!");
+      currentData.balance -= bet;
+      document.getElementById('balance').textContent = currentData.balance.toLocaleString();
+
+      currentBet = bet;
+      currentMultiplier = 1;
+      multipliers = [1];
+      times = [0];
+      crashed = false;
+
+      document.getElementById('betBtn').style.display = 'none';
+      document.getElementById('cashoutBtn').style.display = 'inline-block';
+      document.getElementById('crashResult').innerHTML = '';
+
+      if (!chart) initCrashChart();
+
+      let time = 0;
+      crashInterval = setInterval(() => {
+        time += 0.12;
+        currentMultiplier += (Math.random() * 0.22) + (currentData.isFiveX ? 0.16 : 0.08);
+        multipliers.push(currentMultiplier);
+        times.push(time.toFixed(1));
+        chart.update();
+        document.getElementById('liveMultiplier').textContent = currentMultiplier.toFixed(2) + 'x';
+
+        const maxHeight = 260;
+        const height = Math.min(maxHeight, (currentMultiplier - 1) * 48);
+        document.getElementById('rocket').style.bottom = (30 + height) + 'px';
+
+        if (currentMultiplier > 1.8 && Math.random() < (currentData.isFiveX ? 0.011 : 0.027)) crash();
+      }, 90);
+    }
+
+    function cashOut() {
+      if (crashed) return;
+      clearInterval(crashInterval);
+      const win = Math.floor(currentBet * currentMultiplier * (currentData.isFiveX ? 1.6 : 1));
+      currentData.balance += win;
+      document.getElementById('balance').textContent = currentData.balance.toLocaleString();
+      document.getElementById('crashResult').innerHTML = `✅ CASHED OUT @ <strong>${currentMultiplier.toFixed(2)}x</strong><br>+$${win}`;
+      resetCrash();
+      saveUserData();
+    }
+
+    function crash() {
+      crashed = true;
+      clearInterval(crashInterval);
+      document.getElementById('liveMultiplier').innerHTML = `<span style="color:#ff3366;">💥 CRASHED @ ${currentMultiplier.toFixed(2)}x</span>`;
+      document.getElementById('crashResult').innerHTML = "🚀 Rocket crashed. Bet lost.";
+      resetCrash();
+    }
+
+    function resetCrash() {
+      document.getElementById('betBtn').style.display = 'inline-block';
+      document.getElementById('cashoutBtn').style.display = 'none';
+      document.getElementById('rocket').style.bottom = '30px';
+      setTimeout(() => {
+        multipliers = [1]; times = [0];
+        if (chart) chart.update();
+        document.getElementById('liveMultiplier').textContent = '1.00x';
+      }, 2200);
+    }
+
+    function updateLeaderboard() {
+      const users = getAllUsers();
+      let list = Object.keys(users).map(name => ({ name, balance: users[name].balance || 0 }));
+      list.sort((a,b) => b.balance - a.balance);
+      let html = `<ol style="font-size:1.25em; line-height:2;">`;
+      list.forEach(p => html += `<li><strong>${p.name}</strong> — $${p.balance.toLocaleString()}</li>`);
+      html += `</ol>`;
+      document.getElementById('leaderboardContent').innerHTML = html;
+    }
+
+    function showAdminPanel() {
+      if (currentUser !== "admin") return;
+      const users = getAllUsers();
+      let html = "<ul>";
+      Object.keys(users).forEach(user => {
+        html += `<li><strong>${user}</strong> — Balance: $${users[user].balance} | Pass: ${users[user].password}</li>`;
+      });
+      html += "</ul>";
+      document.getElementById('adminUserList').innerHTML = html;
+    }
+
+    function resetAllData() {
+      if (currentUser !== "admin") return;
+      if (confirm("Reset ALL data?")) {
+        localStorage.removeItem("ballhogUsers");
+        location.reload();
+      }
+    }
+
+    window.onload = () => {
+      document.getElementById('loginScreen').classList.add('active');
+    };
+  </script>
+</body>
+</html>
